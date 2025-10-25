@@ -37,6 +37,12 @@ usermod -aG docker ubuntu
 
 echo "Docker 설치 완료"
 
+# CloudWatch Agent 설치
+echo "CloudWatch Agent 설치 중..."
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+dpkg -i -E ./amazon-cloudwatch-agent.deb
+rm amazon-cloudwatch-agent.deb
+
 # AWS 리전 및 시크릿 정보
 REGION="${aws_region}"
 ADMIN_SECRET_NAME="${admin_secret_name}"
@@ -72,6 +78,90 @@ JWT_SECRET=$(aws secretsmanager get-secret-value \
 
 echo "시크릿 조회 완료"
 
+# CloudWatch Agent 설정 파일 생성
+echo "CloudWatch Agent 설정 중..."
+cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << 'EOF'
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/user-data.log",
+            "log_group_name": "/aws/ec2/hasura/system",
+            "log_stream_name": "{instance_id}/user-data.log",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/log/syslog",
+            "log_group_name": "/aws/ec2/hasura/system",
+            "log_stream_name": "{instance_id}/syslog",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/log/auth.log",
+            "log_group_name": "/aws/ec2/hasura/system",
+            "log_stream_name": "{instance_id}/auth.log",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "namespace": "CWAgent",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_iowait",
+          "cpu_usage_user",
+          "cpu_usage_system"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "disk": {
+        "measurement": [
+          "used_percent"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "*"
+        ]
+      },
+      "diskio": {
+        "measurement": [
+          "io_time"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "*"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "netstat": {
+        "measurement": [
+          "tcp_established",
+          "tcp_time_wait"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "swap": {
+        "measurement": [
+          "swap_used_percent"
+        ],
+        "metrics_collection_interval": 60
+      }
+    }
+  }
+}
+EOF
+
 # Hasura를 Docker로 직접 실행
 echo "Hasura 컨테이너 시작 중..."
 docker run -d \
@@ -94,7 +184,41 @@ docker run -d \
 sleep 10
 docker ps
 
+# CloudWatch Agent 시작
+echo "CloudWatch Agent 시작 중..."
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config \
+  -m ec2 \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+  -s
+
+# Hasura 컨테이너 로그를 CloudWatch로 전송하기 위한 설정
+echo "Hasura 로그를 CloudWatch로 전송 설정 중..."
+docker logs hasura > /var/log/hasura.log 2>&1 &
+
+# 로그 전송을 위한 cron 작업 설정
+echo "*/5 * * * * root docker logs hasura >> /var/log/hasura.log 2>&1" >> /etc/crontab
+
+# CloudWatch Agent 설정에 Hasura 로그 추가
+cat >> /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << 'EOF'
+,
+          {
+            "file_path": "/var/log/hasura.log",
+            "log_group_name": "/aws/ec2/hasura",
+            "log_stream_name": "{instance_id}/hasura.log",
+            "timezone": "UTC"
+          }
+EOF
+
+# CloudWatch Agent 재시작
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config \
+  -m ec2 \
+  -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+  -s
+
 echo "=== Hasura 설치 완료 ==="
 PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 echo "Hasura Console: http://$PUBLIC_IP:8080/console"
 echo "관리자 비밀번호는 Secrets Manager에서 안전하게 관리됩니다"
+echo "CloudWatch 로그 그룹: /aws/ec2/hasura"
