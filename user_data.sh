@@ -170,15 +170,18 @@ docker run -d \
   --restart always \
   -p 8080:8080 \
   -e HASURA_GRAPHQL_DATABASE_URL="$DB_URL" \
-  -e HASURA_GRAPHQL_ENABLE_CONSOLE="true" \
   -e HASURA_GRAPHQL_ADMIN_SECRET="$ADMIN_SECRET" \
   -e HASURA_GRAPHQL_JWT_SECRET="{\"type\":\"HS256\",\"key\":\"$JWT_SECRET\"}" \
-  -e HASURA_GRAPHQL_UNAUTHORIZED_ROLE="anonymous" \
-  -e HASURA_GRAPHQL_DEV_MODE="false" \
-  -e HASURA_GRAPHQL_ENABLED_LOG_TYPES="startup, http-log, webhook-log, websocket-log, query-log" \
   -e HASURA_GRAPHQL_CORS_DOMAIN="$CORS_DOMAINS" \
-  -e HASURA_GRAPHQL_DISABLE_INTROSPECTION="false" \
+  -e HASURA_GRAPHQL_ENABLE_CONSOLE="true" \
+  -e HASURA_GRAPHQL_DEV_MODE="false" \
+  -e HASURA_GRAPHQL_DISABLE_INTROSPECTION="true" \
+  -e HASURA_GRAPHQL_ENABLE_ALLOWLIST="true" \
+  -e HASURA_GRAPHQL_ENABLED_APIS="graphql,metadata" \
+  -e HASURA_GRAPHQL_ENABLE_REMOTE_SCHEMA_PERMISSIONS="true" \
+  -e HASURA_GRAPHQL_ENABLED_LOG_TYPES="startup,http-log,webhook-log,websocket-log,query-log" \
   -e HASURA_GRAPHQL_ENABLE_TELEMETRY="false" \
+  -e HASURA_GRAPHQL_UNAUTHORIZED_ROLE="anonymous" \
   hasura/graphql-engine:v2.48.5
 
 # 컨테이너 상태 확인
