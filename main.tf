@@ -1,29 +1,3 @@
-# variables.tf
-variable "aws_region" {
-  description = "AWS 리전"
-  type        = string
-  default     = "ap-northeast-2" # 서울 리전
-}
-
-# 더 이상 사용하지 않음 - Secrets Manager로 이전
-# variable "neon_database_url" {
-#   description = "Neon PostgreSQL 연결 URL"
-#   type        = string
-#   sensitive   = true
-# }
-
-variable "my_ip" {
-  description = "SSH 접속을 허용할 내 IP (예: 1.2.3.4/32)"
-  type        = string
-}
-
-variable "allowed_ips" {
-  description = "Hasura 접근을 허용할 IP 목록"
-  type        = list(string)
-  default     = []
-}
-
-# main.tf
 terraform {
   required_version = ">= 1.0"
   
@@ -145,90 +119,10 @@ resource "aws_security_group" "hasura" {
   }
 }
 
-# IAM Role for EC2
-resource "aws_iam_role" "ec2" {
-  name = "ec2-hasura-role"
-  
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "ec2.amazonaws.com"
-      }
-      Action = "sts:AssumeRole"
-    }]
-  })
-
-  tags = {
-    Name = "ec2-hasura-role"
-  }
-}
-
-# Secrets Manager 읽기 권한 (Admin Secret + DB URL)
-resource "aws_iam_role_policy" "allow_sm_get" {
-  name = "allow-secretsmanager-get"
-  role = aws_iam_role.ec2.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue"]
-      Resource = [
-        local.admin_secret_arn,
-        local.db_secret_arn,
-        local.jwt_secret_arn
-      ]
-    }]
-  })
-}
-
-# (선택) SSM/Session Manager 사용을 위한 정책 연결
-resource "aws_iam_role_policy_attachment" "ssm_core" {
-  role       = aws_iam_role.ec2.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-# CloudWatch Agent 정책 연결
-resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
-  role       = aws_iam_role.ec2.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
-# CloudWatch 로그 그룹
-resource "aws_cloudwatch_log_group" "hasura" {
-  name              = "/aws/ec2/hasura"
-  retention_in_days = 14
-
-  tags = {
-    Name = "hasura-logs"
-  }
-}
-
-resource "aws_cloudwatch_log_group" "hasura_system" {
-  name              = "/aws/ec2/hasura/system"
-  retention_in_days = 7
-
-  tags = {
-    Name = "hasura-system-logs"
-  }
-}
-
-# IAM Instance Profile
-resource "aws_iam_instance_profile" "ec2" {
-  name = "ec2-hasura-profile"
-  role = aws_iam_role.ec2.name
-
-  tags = {
-    Name = "ec2-hasura-profile"
-  }
-}
-
-# 키 페어 (기존 키 사용 또는 새로 생성)
+# 키 페어
 resource "aws_key_pair" "hasura" {
   key_name   = "hasura-key"
-  public_key = file("~/.ssh/id_rsa.pub") # 본인의 공개키 경로로 수정
+  public_key = file("~/.ssh/id_rsa.pub")
 
   tags = {
     Name = "hasura-key"
@@ -272,30 +166,10 @@ resource "aws_instance" "hasura" {
     admin_secret_name = local.admin_secret_name
     db_secret_name    = local.db_secret_name
     jwt_secret_name   = local.jwt_secret_name
+    cors_domains      = join(",", var.cors_domains)
   })
 
   tags = {
     Name = "hasura-server"
   }
-}
-
-# outputs.tf
-output "ec2_public_ip" {
-  description = "EC2 퍼블릭 IP"
-  value       = aws_instance.hasura.public_ip
-}
-
-output "hasura_console_url" {
-  description = "Hasura Console URL"
-  value       = "http://${aws_instance.hasura.public_ip}:8080/console"
-}
-
-output "hasura_graphql_endpoint" {
-  description = "Hasura GraphQL Endpoint"
-  value       = "http://${aws_instance.hasura.public_ip}:8080/v1/graphql"
-}
-
-output "ssh_command" {
-  description = "SSH 접속 명령어"
-  value       = "ssh -i ~/.ssh/id_rsa ubuntu@${aws_instance.hasura.public_ip}"
 }

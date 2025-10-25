@@ -48,6 +48,7 @@ REGION="${aws_region}"
 ADMIN_SECRET_NAME="${admin_secret_name}"
 DB_SECRET_NAME="${db_secret_name}"
 JWT_SECRET_NAME="${jwt_secret_name}"
+CORS_DOMAINS="${cors_domains}"
 
 echo "Secrets Manager에서 시크릿 조회 중..."
 
@@ -175,7 +176,7 @@ docker run -d \
   -e HASURA_GRAPHQL_UNAUTHORIZED_ROLE="anonymous" \
   -e HASURA_GRAPHQL_DEV_MODE="false" \
   -e HASURA_GRAPHQL_ENABLED_LOG_TYPES="startup, http-log, webhook-log, websocket-log, query-log" \
-  -e HASURA_GRAPHQL_CORS_DOMAIN="https://hasura-brothers.vercel.app,https://www.hasurabrothers.com,http://localhost:3000,https://localhost:3000" \
+  -e HASURA_GRAPHQL_CORS_DOMAIN="$CORS_DOMAINS" \
   -e HASURA_GRAPHQL_DISABLE_INTROSPECTION="false" \
   -e HASURA_GRAPHQL_ENABLE_TELEMETRY="false" \
   hasura/graphql-engine:v2.48.5
