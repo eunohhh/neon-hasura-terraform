@@ -17,6 +17,12 @@ variable "my_ip" {
   type        = string
 }
 
+variable "allowed_ips" {
+  description = "Hasura 접근을 허용할 IP 목록"
+  type        = list(string)
+  default     = []
+}
+
 # main.tf
 terraform {
   required_version = ">= 1.0"
@@ -111,13 +117,16 @@ resource "aws_security_group" "hasura" {
     cidr_blocks = [var.my_ip]
   }
 
-  # Hasura GraphQL (HTTP)
-  ingress {
-    description = "Hasura GraphQL"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  # Hasura GraphQL (HTTP) - 허용된 IP들만 접근 가능
+  dynamic "ingress" {
+    for_each = length(var.allowed_ips) > 0 ? var.allowed_ips : [var.my_ip]
+    content {
+      description = "Hasura GraphQL from allowed IP"
+      from_port   = 8080
+      to_port     = 8080
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
   }
 
   # 아웃바운드 모두 허용

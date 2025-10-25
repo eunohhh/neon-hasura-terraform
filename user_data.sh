@@ -75,9 +75,11 @@ docker run -d \
   -e HASURA_GRAPHQL_ADMIN_SECRET="$ADMIN_SECRET" \
   -e HASURA_GRAPHQL_JWT_SECRET="{\"type\":\"HS256\",\"key\":\"$ADMIN_SECRET\"}" \
   -e HASURA_GRAPHQL_UNAUTHORIZED_ROLE="anonymous" \
-  -e HASURA_GRAPHQL_DEV_MODE="true" \
+  -e HASURA_GRAPHQL_DEV_MODE="false" \
   -e HASURA_GRAPHQL_ENABLED_LOG_TYPES="startup, http-log, webhook-log, websocket-log, query-log" \
-  -e HASURA_GRAPHQL_CORS_DOMAIN="*" \
+  -e HASURA_GRAPHQL_CORS_DOMAIN="https://hasura-brothers.vercel.app,https://www.hasurabrothers.com,http://localhost:3000,https://localhost:3000" \
+  -e HASURA_GRAPHQL_DISABLE_INTROSPECTION="false" \
+  -e HASURA_GRAPHQL_ENABLE_TELEMETRY="false" \
   hasura/graphql-engine:v2.48.5
 
 # 컨테이너 상태 확인
