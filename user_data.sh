@@ -41,6 +41,7 @@ echo "Docker 설치 완료"
 REGION="${aws_region}"
 ADMIN_SECRET_NAME="${admin_secret_name}"
 DB_SECRET_NAME="${db_secret_name}"
+JWT_SECRET_NAME="${jwt_secret_name}"
 
 echo "Secrets Manager에서 시크릿 조회 중..."
 
@@ -54,6 +55,13 @@ ADMIN_SECRET=$(aws secretsmanager get-secret-value \
 # DB URL 조회
 DB_URL=$(aws secretsmanager get-secret-value \
   --secret-id "$DB_SECRET_NAME" \
+  --region "$REGION" \
+  --query 'SecretString' \
+  --output text)
+
+# JWT Secret 조회
+JWT_SECRET=$(aws secretsmanager get-secret-value \
+  --secret-id "$JWT_SECRET_NAME" \
   --region "$REGION" \
   --query 'SecretString' \
   --output text)
@@ -73,7 +81,7 @@ docker run -d \
   -e HASURA_GRAPHQL_DATABASE_URL="$DB_URL" \
   -e HASURA_GRAPHQL_ENABLE_CONSOLE="true" \
   -e HASURA_GRAPHQL_ADMIN_SECRET="$ADMIN_SECRET" \
-  -e HASURA_GRAPHQL_JWT_SECRET="{\"type\":\"HS256\",\"key\":\"$ADMIN_SECRET\"}" \
+  -e HASURA_GRAPHQL_JWT_SECRET="{\"type\":\"HS256\",\"key\":\"$JWT_SECRET\"}" \
   -e HASURA_GRAPHQL_UNAUTHORIZED_ROLE="anonymous" \
   -e HASURA_GRAPHQL_DEV_MODE="false" \
   -e HASURA_GRAPHQL_ENABLED_LOG_TYPES="startup, http-log, webhook-log, websocket-log, query-log" \

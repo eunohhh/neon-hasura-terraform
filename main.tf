@@ -47,8 +47,10 @@ locals {
   region             = var.aws_region
   admin_secret_name  = "hasura/admin_secret"
   db_secret_name     = "hasura/database_url"
+  jwt_secret_name    = "hasura/jwt_secret"
   admin_secret_arn   = "arn:aws:secretsmanager:${local.region}:${data.aws_caller_identity.me.account_id}:secret:${local.admin_secret_name}-*"
   db_secret_arn      = "arn:aws:secretsmanager:${local.region}:${data.aws_caller_identity.me.account_id}:secret:${local.db_secret_name}-*"
+  jwt_secret_arn     = "arn:aws:secretsmanager:${local.region}:${data.aws_caller_identity.me.account_id}:secret:${local.jwt_secret_name}-*"
 }
 
 # VPC
@@ -175,7 +177,8 @@ resource "aws_iam_role_policy" "allow_sm_get" {
       Action   = ["secretsmanager:GetSecretValue"]
       Resource = [
         local.admin_secret_arn,
-        local.db_secret_arn
+        local.db_secret_arn,
+        local.jwt_secret_arn
       ]
     }]
   })
@@ -243,6 +246,7 @@ resource "aws_instance" "hasura" {
     aws_region        = local.region
     admin_secret_name = local.admin_secret_name
     db_secret_name    = local.db_secret_name
+    jwt_secret_name   = local.jwt_secret_name
   })
 
   tags = {
