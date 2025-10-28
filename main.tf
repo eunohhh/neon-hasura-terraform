@@ -130,6 +130,11 @@ resource "aws_key_pair" "hasura" {
   tags = {
     Name = "hasura-key"
   }
+  
+  lifecycle {
+    create_before_destroy = false
+    prevent_destroy       = false
+  }
 }
 
 # 최신 Ubuntu 22.04 ARM64 AMI 조회

@@ -16,6 +16,11 @@ resource "aws_iam_role" "ec2" {
   tags = {
     Name = "ec2-hasura-role"
   }
+  
+  lifecycle {
+    create_before_destroy = false
+    prevent_destroy       = false
+  }
 }
 
 # Secrets Manager 읽기 권한 (Admin Secret + DB URL + JWT Secret)
@@ -56,6 +61,11 @@ resource "aws_iam_instance_profile" "ec2" {
 
   tags = {
     Name = "ec2-hasura-profile"
+  }
+  
+  lifecycle {
+    create_before_destroy = false
+    prevent_destroy       = false
   }
 }
 

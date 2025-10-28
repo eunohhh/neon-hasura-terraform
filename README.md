@@ -104,14 +104,34 @@ terraform init
 terraform plan -out=myplan.tfplan
 ```
 
-### 7. 인프라 배포
+### 7. 기존 리소스 Import (선택사항)
+이전에 생성된 IAM Role이나 Key Pair가 있다면 import하여 재사용할 수 있습니다:
+
+```bash
+# IAM Role import
+terraform import aws_iam_role.ec2 ec2-hasura-role
+
+# IAM Instance Profile import
+terraform import aws_iam_instance_profile.ec2 ec2-hasura-profile
+
+# IAM Role Policy Attachments import
+terraform import aws_iam_role_policy_attachment.ssm_core ec2-hasura-role/arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+terraform import aws_iam_role_policy_attachment.cloudwatch_agent ec2-hasura-role/arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+
+# Key Pair import
+terraform import aws_key_pair.hasura hasura-key
+```
+
+⚠️ **주의**: Import는 해당 리소스가 이미 AWS에 존재할 때만 사용하세요. 새로 배포하는 경우는 건너뛰세요.
+
+### 8. 인프라 배포
 ```bash
 terraform apply myplan.tfplan
 ```
 
 `yes` 입력 후 약 3-5분 대기
 
-### 8. 출력 정보 확인
+### 9. 출력 정보 확인
 ```bash
 terraform output
 ```
@@ -326,6 +346,29 @@ sudo tail -f /var/log/hasura.log
   ```hcl
   ssh_public_key_path = "~/.ssh/my_custom_key.pub"
   ```
+
+### IAM Role 또는 Key Pair 충돌 오류
+이미 존재하는 리소스와 충돌할 때:
+```bash
+# Error: EntityAlreadyExists: Role with name ec2-hasura-role already exists
+# Error: InvalidKeyPair.Duplicate: The keypair already exists
+```
+
+**해결 방법**:
+1. 기존 리소스를 Terraform state에 import:
+   ```bash
+   terraform import aws_iam_role.ec2 ec2-hasura-role
+   terraform import aws_iam_instance_profile.ec2 ec2-hasura-profile
+   terraform import aws_key_pair.hasura hasura-key
+   ```
+
+2. 또는 AWS 콘솔에서 기존 리소스 삭제 후 다시 배포
+
+### 잘못된 AWS 계정에 배포된 경우
+- `aws sts get-caller-identity`로 현재 계정 확인
+- `aws configure`로 올바른 계정 설정
+- 잘못된 계정의 리소스는 `terraform destroy`로 삭제
+- 올바른 계정에 다시 배포
 
 ## 📚 참고 자료
 
