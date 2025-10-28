@@ -63,8 +63,11 @@ aws secretsmanager create-secret \
 cat > terraform.tfvars <<EOF
 aws_region = "ap-northeast-2"  # 서울 리전
 
-# 내 IP 주소 (SSH 접속용, /32 붙이기)
-my_ip = "123.456.789.012/32"
+# 내 IP 주소 목록 (SSH 접속용, /32 붙이기)
+my_ip = [
+  "123.456.789.012/32",  # 집 IP
+  "203.123.456.789/32"   # 회사 IP
+]
 
 # CORS 도메인 목록
 cors_domains = [
@@ -81,8 +84,11 @@ cors_domains = [
 #   "1.2.3.4/32"         # 다른 장소 IP
 # ]
 
-# 임시로 모든 IP 허용 (개발용)
+# 모든 IP 허용 (Vercel 배포 대비)
 allowed_ips = ["0.0.0.0/0"]
+
+# SSH 공개키 파일 경로 (기본값: ~/.ssh/id_rsa.pub)
+# ssh_public_key_path = "~/.ssh/id_rsa.pub"
 EOF
 ```
 
@@ -205,16 +211,29 @@ to_port     = 8080
 aws_region = "us-east-1"  # 다른 리전으로 변경
 ```
 
+### SSH 키 경로 변경
+`terraform.tfvars`에서:
+```hcl
+# 기본값 사용 (변경 없음)
+# ssh_public_key_path = "~/.ssh/id_rsa.pub"
+
+# 다른 SSH 키 사용
+ssh_public_key_path = "~/.ssh/my_custom_key.pub"
+
+# 절대 경로 사용
+ssh_public_key_path = "/home/user/.ssh/id_rsa.pub"
+```
+
 ## 📝 파일 구조
 ```
 hasura-terraform/
 ├── main.tf              # 메인 인프라 설정 (VPC, EC2 등)
-├── variables.tf         # 입력 변수 정의
+├── variables.tf         # 입력 변수 정의 (my_ip 배열, ssh_public_key_path 등)
 ├── outputs.tf           # 출력 값 정의
 ├── iam.tf               # IAM 역할 및 정책
 ├── cloudwatch.tf        # CloudWatch 로그 그룹
 ├── user_data.sh         # EC2 초기화 스크립트
-├── terraform.tfvars     # 변수 값 (절대 커밋하지 말 것!)
+├── terraform.tfvars     # 변수 값 (my_ip 배열, ssh 키 경로 등)
 ├── .gitignore          # Git 무시 파일
 └── README.md           # 이 가이드
 ```
@@ -276,7 +295,8 @@ sudo docker ps -a
 
 ### EC2 접속이 안 될 때
 - Security Group에서 내 IP가 올바른지 확인
-- `terraform.tfvars`의 `my_ip` 값 확인 (끝에 `/32` 붙었는지)
+- `terraform.tfvars`의 `my_ip` 배열 값 확인 (끝에 `/32` 붙었는지)
+- 여러 IP를 사용하는 경우 모든 IP가 올바른지 확인
 
 ### Neon DB 연결 오류
 - Secrets Manager에서 `hasura/database_url` 값 확인
@@ -295,6 +315,17 @@ sudo tail -f /var/log/hasura.log
 ### JWT Secret 오류
 - Secrets Manager에서 `hasura/jwt_secret` 값이 32자 이상인지 확인
 - IAM 권한이 올바른지 확인
+
+### SSH 키 파일을 찾을 수 없을 때
+- `terraform.tfvars`의 `ssh_public_key_path` 경로 확인
+- SSH 키 파일이 실제로 존재하는지 확인:
+  ```bash
+  ls -la ~/.ssh/id_rsa.pub
+  ```
+- 다른 SSH 키를 사용하려면 경로를 변경:
+  ```hcl
+  ssh_public_key_path = "~/.ssh/my_custom_key.pub"
+  ```
 
 ## 📚 참고 자료
 

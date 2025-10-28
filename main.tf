@@ -84,18 +84,21 @@ resource "aws_security_group" "hasura" {
   description = "Hasura EC2 Security Group"
   vpc_id      = aws_vpc.main.id
 
-  # SSH 접속 (내 IP만)
-  ingress {
-    description = "SSH from my IP"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.my_ip]
+  # SSH 접속 (내 IP들만)
+  dynamic "ingress" {
+    for_each = var.my_ip
+    content {
+      description = "SSH from my IP"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
   }
 
   # Hasura GraphQL (HTTP) - 허용된 IP들만 접근 가능
   dynamic "ingress" {
-    for_each = length(var.allowed_ips) > 0 ? var.allowed_ips : [var.my_ip]
+    for_each = length(var.allowed_ips) > 0 ? var.allowed_ips : var.my_ip
     content {
       description = "Hasura GraphQL from allowed IP"
       from_port   = 8080
@@ -122,7 +125,7 @@ resource "aws_security_group" "hasura" {
 # 키 페어
 resource "aws_key_pair" "hasura" {
   key_name   = "hasura-key"
-  public_key = file("~/.ssh/id_rsa.pub")
+  public_key = file(var.ssh_public_key_path)
 
   tags = {
     Name = "hasura-key"
