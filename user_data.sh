@@ -37,9 +37,9 @@ usermod -aG docker ubuntu
 
 echo "Docker 설치 완료"
 
-# CloudWatch Agent 설치
+# CloudWatch Agent 설치 (ARM64)
 echo "CloudWatch Agent 설치 중..."
-wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/arm64/latest/amazon-cloudwatch-agent.deb
 dpkg -i -E ./amazon-cloudwatch-agent.deb
 rm amazon-cloudwatch-agent.deb
 

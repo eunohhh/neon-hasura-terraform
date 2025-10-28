@@ -144,6 +144,11 @@ hasura_graphql_endpoint = "http://13.125.123.456:8080/v1/graphql"
 ssh_command = "ssh -i ~/.ssh/id_rsa ubuntu@13.125.123.456"
 ```
 
+### 10. 현재 인스턴스를 교체
+```bash
+terraform apply -replace="aws_instance.hasura"
+```
+
 ## ✅ 동작 확인
 
 ### 1. Hasura Console 접속
